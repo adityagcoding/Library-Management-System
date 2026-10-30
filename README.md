@@ -1,4 +1,5 @@
-# Library Management System
+🚀 Click Here to View Live Project# Library Management System
+https://adityagcoding.github.io/Library-Management-System/
 
 A library management project containing a browser-based interface, Java source code, and a MySQL database schema.
 
