@@ -1,0 +1,19 @@
+# Java build output
+*.class
+build/
+out/
+target/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+.project
+.classpath
+.settings/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.log

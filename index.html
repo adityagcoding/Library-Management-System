@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital library</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* ======================================================
+           CSS VARIABLES & RESET
+           ====================================================== */
+        :root {
+            --primary: #1e3a5f;
+            --primary-light: #2c5282;
+            --primary-dark: #0f2440;
+            --accent: #3182ce;
+            --accent-light: #4299e1;
+            --accent-hover: #2b6cb0;
+            --success: #38a169;
+            --success-light: #c6f6d5;
+            --warning: #d69e2e;
+            --warning-light: #fefcbf;
+            --danger: #e53e3e;
+            --danger-light: #fed7d7;
+            --info: #3182ce;
+            --info-light: #bee3f8;
+            --bg: #f0f4f8;
+            --card-bg: #ffffff;
+            --sidebar-bg: #1a202c;
+            --sidebar-hover: #2d3748;
+            --sidebar-active: #2c5282;
+            --text: #2d3748;
+            --text-light: #718096;
+            --text-lighter: #a0aec0;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+            --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,.1), 0 4px 6px rgba(0,0,0,.05);
+            --radius: 8px;
+            --radius-lg: 12px;
+            --sidebar-w: 260px;
+            --header-h: 64px;
+            --transition: .25s ease;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        button { cursor: pointer; font-family: inherit; }
+        input, select, textarea { font-family: inherit; }
+
+        /* ======================================================
+           LAYOUT
+           ====================================================== */
+        .app { display: flex; min-height: 100vh; }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: var(--sidebar-w);
+            background: var(--sidebar-bg);
+            color: #e2e8f0;
+            position: fixed;
+            top: 0; left: 0; bottom: 0;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            transition: transform var(--transition);
+        }
+        .sidebar.collapsed { transform: translateX(calc(-1 * var(--sidebar-w))); }
+
+        .sidebar-brand {
+            padding: 20px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+        .sidebar-brand-icon {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, var(--accent), var(--accent-light));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 20px; color: #fff;
+        }
+        .sidebar-brand-text h2 { font-size: 15px; font-weight: 700; color: #fff; line-height: 1.2; }
+        .sidebar-brand-text span { font-size: 11px; color: var(--text-lighter); letter-spacing: .5px; }
+
+        .sidebar-nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+        .sidebar-nav::-webkit-scrollbar { width: 4px; }
+        .sidebar-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.15); border-radius: 2px; }
+
+        .nav-section { padding: 10px 18px 6px; font-size: 10px; text-transform: uppercase;
+                        letter-spacing: 1.2px; color: var(--text-lighter); font-weight: 600; }
+
+        .nav-item {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 18px; margin: 2px 8px;
+            border-radius: var(--radius);
+            font-size: 14px; font-weight: 500;
+            transition: all var(--transition);
+            cursor: pointer;
+            color: #cbd5e0;
+        }
+        .nav-item:hover { background: var(--sidebar-hover); color: #fff; }
+        .nav-item.active { background: var(--sidebar-active); color: #fff; font-weight: 600; }
+        .nav-item i { width: 20px; text-align: center; font-size: 15px; }
+        .nav-item .badge {
+            margin-left: auto;
+            background: var(--danger);
+            color: #fff;
+            font-size: 10px; font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 10px;
+        }
+
+        .sidebar-footer {
+            padding: 14px 18px;
+            border-top: 1px solid rgba(255,255,255,.08);
+            font-size: 11px;
+            color: var(--text-lighter);
+            text-align: center;
+        }
+
+        /* MAIN AREA */
+        .main-area {
+            flex: 1;
+            margin-left: var(--sidebar-w);
+            transition: margin-left var(--transition);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+        .sidebar.collapsed ~ .main-area { margin-left: 0; }
+
+        /* HEADER */
+        .header {
+            height: var(--header-h);
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            position: sticky; top: 0;
+            z-index: 900;
+            box-shadow: var(--shadow);
+        }
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .menu-toggle {
+            display: none;
+            background: none; border: none;
+            font-size: 20px; color: var(--text);
+            padding: 6px;
+        }
+        .header-title h1 { font-size: 18px; font-weight: 700; color: var(--primary); }
+        .header-title span { font-size: 12px; color: var(--text-light); }
+
+        .header-right { display: flex; align-items: center; gap: 16px; }
+        .header-icon {
+            width: 38px; height: 38px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg);
+            color: var(--text-light);
+            font-size: 16px;
+            border: none;
+            transition: all var(--transition);
+            position: relative;
+        }
+        .header-icon:hover { background: var(--border); color: var(--text); }
+        .header-icon .notif-dot {
+            position: absolute; top: 6px; right: 6px;
+            width: 8px; height: 8px;
+            background: var(--danger);
+            border-radius: 50%;
+            border: 2px solid var(--card-bg);
+        }
+
+        .header-profile {
+            display: flex; align-items: center; gap: 10px;
+            padding: 6px 12px 6px 6px;
+            border-radius: 24px;
+            background: var(--bg);
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+        .header-profile:hover { background: var(--border); }
+        .header-avatar {
+            width: 34px; height: 34px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--primary));
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 700; font-size: 14px;
+        }
+        .header-profile-info { line-height: 1.2; }
+        .header-profile-info .name { font-size: 13px; font-weight: 600; }
+        .header-profile-info .role { font-size: 11px; color: var(--text-light); }
+
+        /* CONTENT */
+        .content { flex: 1; padding: 24px; }
+
+        /* PAGE */
+        .page { display: none; animation: fadeIn .3s ease; }
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .page-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+        }
+        .page-header h2 { font-size: 22px; font-weight: 700; color: var(--primary-dark); }
+        .page-header p { font-size: 14px; color: var(--text-light); margin-top: 2px; }
+        .breadcrumb { font-size: 12px; color: var(--text-light); }
+        .breadcrumb span { color: var(--accent); }
+
+        /* ======================================================
+           CARDS
+           ====================================================== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 22px;
+            box-shadow: var(--shadow);
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            transition: transform var(--transition), box-shadow var(--transition);
+            border-left: 4px solid transparent;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .stat-card.blue { border-left-color: var(--accent); }
+        .stat-card.green { border-left-color: var(--success); }
+        .stat-card.orange { border-left-color: var(--warning); }
+        .stat-card.purple { border-left-color: #805ad5; }
+
+        .stat-icon {
+            width: 52px; height: 52px;
+            border-radius: var(--radius);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 22px;
+        }
+        .stat-card.blue .stat-icon { background: var(--info-light); color: var(--accent); }
+        .stat-card.green .stat-icon { background: var(--success-light); color: var(--success); }
+        .stat-card.orange .stat-icon { background: var(--warning-light); color: var(--warning); }
+        .stat-card.purple .stat-icon { background: #e9d8fd; color: #805ad5; }
+
+        .stat-info h3 { font-size: 26px; font-weight: 700; line-height: 1; }
+        .stat-info p { font-size: 13px; color: var(--text-light); margin-top: 4px; }
+
+        /* CARD CONTAINER */
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .card-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .card-header h3 { font-size: 16px; font-weight: 700; color: var(--primary-dark); }
+        .card-body { padding: 22px; }
+
+        /* ======================================================
+           TABLES
+           ====================================================== */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        thead th {
+            background: var(--bg);
+            padding: 12px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--text-light);
+            text-align: left;
+            white-space: nowrap;
+            border-bottom: 2px solid var(--border);
+        }
+        tbody td {
+            padding: 12px 14px;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+        tbody tr { transition: background var(--transition); }
+        tbody tr:hover { background: #f7fafc; }
+        tbody tr:last-child td { border-bottom: none; }
+
+        /* STATUS BADGES */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: .3px;
+        }
+        .badge-issued { background: var(--warning-light); color: #975a16; }
+        .badge-returned, .badge-completed { background: var(--success-light); color: #276749; }
+        .badge-overdue { background: var(--danger-light); color: #c53030; }
+        .badge-available { background: var(--success-light); color: #276749; }
+        .badge-unavailable { background: var(--danger-light); color: #c53030; }
+
+        /* ACTION BUTTONS */
+        .action-btns { display: flex; gap: 6px; }
+        .action-btn {
+            width: 32px; height: 32px;
+            border: none;
+            border-radius: 6px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 13px;
+            transition: all var(--transition);
+        }
+        .action-btn.view { background: var(--info-light); color: var(--accent); }
+        .action-btn.edit { background: var(--warning-light); color: #975a16; }
+        .action-btn.delete { background: var(--danger-light); color: var(--danger); }
+        .action-btn:hover { transform: scale(1.1); filter: brightness(.92); }
+
+        /* ======================================================
+           FORMS
+           ====================================================== */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 18px;
+        }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+        }
+        .form-group label .required { color: var(--danger); }
+        .form-control {
+            padding: 10px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 14px;
+            color: var(--text);
+            background: var(--card-bg);
+            transition: border-color var(--transition), box-shadow var(--transition);
+            outline: none;
+        }
+        .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(49,130,206,.15); }
+        .form-control::placeholder { color: var(--text-lighter); }
+
+        select.form-control { appearance: auto; }
+
+        .form-actions {
+            display: flex; gap: 10px; flex-wrap: wrap;
+            margin-top: 8px;
+            grid-column: 1 / -1;
+        }
+
+        /* BUTTONS */
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-weight: 600;
+            transition: all var(--transition);
+        }
+        .btn:hover { transform: translateY(-1px); filter: brightness(.92); }
+        .btn:active { transform: translateY(0); }
+        .btn-primary { background: var(--accent); color: #fff; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-warning { background: var(--warning); color: #fff; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-outline {
+            background: transparent;
+            border: 1.5px solid var(--border);
+            color: var(--text);
+        }
+        .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
+        .btn-sm { padding: 7px 14px; font-size: 13px; }
+
+        /* SEARCH */
+        .search-box {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            max-width: 350px;
+        }
+        .search-box input {
+            flex: 1;
+            padding: 9px 14px;
+            border: 1.5px solid var(--border);
+            border-right: none;
+            border-radius: var(--radius) 0 0 var(--radius);
+            font-size: 14px;
+            outline: none;
+            transition: border-color var(--transition);
+        }
+        .search-box input:focus { border-color: var(--accent); }
+        .search-box button {
+            padding: 9px 16px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: 0 var(--radius) var(--radius) 0;
+            font-size: 14px;
+        }
+
+        /* BIG SEARCH */
+        .search-big {
+            max-width: 650px;
+            margin: 0 auto 30px;
+        }
+        .search-big input {
+            width: 100%;
+            padding: 16px 22px;
+            border: 2px solid var(--border);
+            border-radius: var(--radius-lg);
+            font-size: 16px;
+            outline: none;
+            transition: all var(--transition);
+        }
+        .search-big input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(49,130,206,.12); }
+
+        /* ======================================================
+           AVAILABILITY BOX
+           ====================================================== */
+        .avail-box {
+            padding: 14px 20px;
+            border-radius: var(--radius);
+            background: var(--info-light);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+        .avail-box i { font-size: 20px; color: var(--accent); }
+        .avail-box .avail-text { font-size: 14px; }
+        .avail-box .avail-text strong { font-size: 16px; color: var(--primary); }
+
+        /* ======================================================
+           ACTIVITY FEED
+           ====================================================== */
+        .activity-list { list-style: none; }
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .activity-item:last-child { border-bottom: none; }
+        .activity-icon {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        .activity-icon.add { background: var(--success-light); color: var(--success); }
+        .activity-icon.issue { background: var(--warning-light); color: var(--warning); }
+        .activity-icon.return { background: var(--info-light); color: var(--accent); }
+        .activity-icon.member { background: #e9d8fd; color: #805ad5; }
+        .activity-text { font-size: 14px; line-height: 1.5; }
+        .activity-text .time { display: block; font-size: 12px; color: var(--text-lighter); margin-top: 2px; }
+
+        /* ======================================================
+           TWO-COL GRID
+           ====================================================== */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; }
+
+        /* REPORT BAR */
+        .report-bar-wrap { margin-bottom: 14px; }
+        .report-bar-label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+        .report-bar-label span:last-child { font-weight: 700; }
+        .report-bar { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+        .report-bar-fill { height: 100%; border-radius: 5px; transition: width .6s ease; }
+        .report-bar-fill.blue { background: var(--accent); }
+        .report-bar-fill.green { background: var(--success); }
+        .report-bar-fill.orange { background: var(--warning); }
+        .report-bar-fill.purple { background: #805ad5; }
+
+        /* SETTINGS */
+        .settings-section { margin-bottom: 28px; }
+        .settings-section h4 { font-size: 16px; font-weight: 700; margin-bottom: 14px; color: var(--primary-dark); }
+        .settings-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .settings-row:last-child { border-bottom: none; }
+        .settings-row-info { }
+        .settings-row-info p { font-size: 14px; font-weight: 600; }
+        .settings-row-info span { font-size: 12px; color: var(--text-light); }
+
+        /* TOGGLE SWITCH */
+        .toggle { position: relative; width: 44px; height: 24px; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle-slider {
+            position: absolute; inset: 0;
+            background: var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            width: 18px; height: 18px;
+            left: 3px; top: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform var(--transition);
+        }
+        .toggle input:checked + .toggle-slider { background: var(--accent); }
+        .toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+        /* ======================================================
+           NOTIFICATION TOAST
+           ====================================================== */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .toast {
+            padding: 14px 20px;
+            border-radius: var(--radius);
+            color: #fff;
+            font-size: 14px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 280px;
+            box-shadow: var(--shadow-lg);
+            animation: slideIn .3s ease, fadeOut .3s ease 2.7s forwards;
+        }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--accent); }
+        @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } }
+        @keyframes fadeOut { to { opacity: 0; transform: translateX(40px); } }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.45);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 9000;
+            animation: fadeIn .2s ease;
+        }
+        .modal-overlay.hidden { display: none; }
+        .modal {
+            background: var(--card-bg);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            max-width: 420px;
+            width: 90%;
+            box-shadow: var(--shadow-lg);
+            text-align: center;
+        }
+        .modal h3 { font-size: 18px; margin-bottom: 10px; }
+        .modal p { font-size: 14px; color: var(--text-light); margin-bottom: 20px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: center; }
+
+        /* EMPTY STATE */
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
+        .empty-state i { font-size: 48px; margin-bottom: 12px; color: var(--border); }
+        .empty-state p { font-size: 15px; }
+
+        /* ======================================================
+           RESPONSIVE
+           ====================================================== */
+        @media (max-width: 1024px) {
+            .grid-2 { grid-template-columns: 1fr; }
+            .grid-3 { grid-template-columns: 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(calc(-1 * var(--sidebar-w))); }
+            .sidebar.open { transform: translateX(0); }
+            .main-area { margin-left: 0 !important; }
+            .menu-toggle { display: flex; }
+            .content { padding: 16px; }
+            .stats-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+            .stat-card { padding: 16px; }
+            .stat-icon { width: 42px; height: 42px; font-size: 18px; }
+            .stat-info h3 { font-size: 22px; }
+            .form-grid { grid-template-columns: 1fr; }
+            .header-profile-info { display: none; }
+            .page-header { flex-direction: column; align-items: flex-start; }
+        }
+
+        /* SIDEBAR OVERLAY */
+        .sidebar-overlay {
+            display: none;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,.4);
+            z-index: 999;
+        }
+        .sidebar-overlay.show { display: block; }
+
+        /* VIEW MODAL */
+        .view-modal-content { text-align: left; }
+        .view-row { display: flex; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+        .view-row:last-child { border-bottom: none; }
+        .view-label { font-weight: 600; width: 140px; flex-shrink: 0; color: var(--text-light); }
+        .view-value { flex: 1; }
+
+        /* DONUT CHART (CSS only) */
+        .donut-chart {
+            width: 160px; height: 160px;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            position: relative;
+        }
+        .donut-center {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90px; height: 90px;
+            background: var(--card-bg);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column;
+        }
+        .donut-center .donut-num { font-size: 24px; font-weight: 700; color: var(--primary); line-height: 1; }
+        .donut-center .donut-label { font-size: 11px; color: var(--text-light); }
+
+        .legend { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+        .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+<div class="app">
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="sidebar-brand-icon"><i class="fas fa-book-open"></i></div>
+            <div class="sidebar-brand-text">
+                <h2>Library System</h2>
+                <span>Smart Administration</span>
+            </div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="nav-section">Main Menu</div>
+            <div class="nav-item active" data-page="dashboard"><i class="fas fa-th-large"></i> Dashboard</div>
+            <div class="nav-item" data-page="books"><i class="fas fa-book"></i> Book Management</div>
+            <div class="nav-item" data-page="members"><i class="fas fa-users"></i> Member Management</div>
+
+            <div class="nav-section">Transactions</div>
+            <div class="nav-item" data-page="issue"><i class="fas fa-hand-holding"></i> Issue Book</div>
+            <div class="nav-item" data-page="return"><i class="fas fa-undo-alt"></i> Return Book</div>
+
+            <div class="nav-section">Tools</div>
+            <div class="nav-item" data-page="search"><i class="fas fa-search"></i> Search Books</div>
+            <div class="nav-item" data-page="reports"><i class="fas fa-chart-bar"></i> Reports</div>
+            <div class="nav-item" data-page="settings"><i class="fas fa-cog"></i> Settings</div>
+
+            <div class="nav-section"></div>
+            <div class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</div>
+        </nav>
+        <div class="sidebar-footer">
+            &copy; 2026 Library Management System<br>B.Tech Mini Project
+        </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main-area">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menuToggle"><i class="fas fa-bars"></i></button>
+                <div class="header-title">
+                    <h1>📚 Digital Library</h1>
+                    <span>Smart Library Administration</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="header-icon"><i class="fas fa-bell"></i><span class="notif-dot"></span></button>
+                <div class="header-profile" id="logoutBtn2">
+                    <div class="header-avatar">A</div>
+                    <div class="header-profile-info">
+                        <div class="name">Admin User</div>
+                        <div class="role">Administrator</div>
+                    </div>
+                    <i class="fas fa-sign-out-alt" style="color:var(--text-lighter);margin-left:4px;font-size:13px" title="Logout"></i>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+<!-- =========================================================
+     PAGE: DASHBOARD
+     ========================================================= -->
+<div class="page active" id="page-dashboard">
+    <div class="page-header">
+        <div>
+            <h2>Dashboard</h2>
+            <p>Overview of library statistics and recent activity</p>
+        </div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Dashboard</span></div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card blue">
+            <div class="stat-icon"><i class="fas fa-book"></i></div>
+            <div class="stat-info"><h3 id="statTotalBooks">0</h3><p>Total Books</p></div>
+        </div>
+        <div class="stat-card green">
+            <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
+            <div class="stat-info"><h3 id="statAvailBooks">0</h3><p>Available Books</p></div>
+        </div>
+        <div class="stat-card orange">
+            <div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
+            <div class="stat-info"><h3 id="statIssuedBooks">0</h3><p>Issued Books</p></div>
+        </div>
+        <div class="stat-card purple">
+            <div class="stat-icon"><i class="fas fa-user-friends"></i></div>
+            <div class="stat-info"><h3 id="statTotalMembers">0</h3><p>Total Members</p></div>
+        </div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><h3><i class="fas fa-clock" style="margin-right:8px;color:var(--accent)"></i>Recent Book Issues</h3></div>
+            <div class="card-body table-wrap">
+                <table>
+                    <thead><tr><th>Issue ID</th><th>Book</th><th>Member</th><th>Issue Date</th><th>Return Date</th><th>Status</th></tr></thead>
+                    <tbody id="dashRecentIssues"></tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3><i class="fas fa-bolt" style="margin-right:8px;color:var(--warning)"></i>Library Activity</h3></div>
+            <div class="card-body">
+                <ul class="activity-list" id="activityFeed"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     PAGE: BOOK MANAGEMENT
+     ========================================================= -->
+<div class="page" id="page-books">
+    <div class="page-header">
+        <div><h2>Book Management</h2><p>Add, update, and manage library books</p></div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Books</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-plus-circle" style="margin-right:8px;color:var(--success)"></i>Add / Edit Book</h3></div>
+        <div class="card-body">
+            <form id="bookForm" class="form-grid">
+                <input type="hidden" id="bookEditId">
+                <div class="form-group">
+                    <label>Book Title <span class="required">*</span></label>
+                    <input type="text" id="bookTitle" class="form-control" placeholder="Enter book title" required>
+                </div>
+                <div class="form-group">
+                    <label>Author <span class="required">*</span></label>
+                    <input type="text" id="bookAuthor" class="form-control" placeholder="Enter author name" required>
+                </div>
+                <div class="form-group">
+                    <label>Category <span class="required">*</span></label>
+                    <select id="bookCategory" class="form-control" required>
+                        <option value="">Select Category</option>
+                        <option>Fiction</option>
+                        <option>Non-Fiction</option>
+                        <option>Science</option>
+                        <option>Technology</option>
+                        <option>Mathematics</option>
+                        <option>Engineering</option>
+                        <option>History</option>
+                        <option>Literature</option>
+                        <option>Programming</option>
+                        <option>Reference</option>
+                        <option>Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Quantity <span class="required">*</span></label>
+                    <input type="number" id="bookQuantity" class="form-control" placeholder="Total copies" min="1" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success" id="bookSubmitBtn"><i class="fas fa-plus"></i> Add Book</button>
+                    <button type="button" class="btn btn-outline" onclick="clearBookForm()"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-list" style="margin-right:8px;color:var(--accent)"></i>Book List</h3>
+            <div class="search-box">
+                <input type="text" id="bookSearch" placeholder="Search books...">
+                <button onclick="renderBookTable()"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div class="card-body table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Category</th><th>Qty</th><th>Available</th><th>Actions</th></tr></thead>
+                <tbody id="bookTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     PAGE: MEMBER MANAGEMENT
+     ========================================================= -->
+<div class="page" id="page-members">
+    <div class="page-header">
+        <div><h2>Member Management</h2><p>Register and manage library members</p></div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Members</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-user-plus" style="margin-right:8px;color:var(--success)"></i>Add / Edit Member</h3></div>
+        <div class="card-body">
+            <form id="memberForm" class="form-grid">
+                <input type="hidden" id="memberEditId">
+                <div class="form-group">
+                    <label>Member Name <span class="required">*</span></label>
+                    <input type="text" id="memberName" class="form-control" placeholder="Enter full name" required>
+                </div>
+                <div class="form-group">
+                    <label>Contact <span class="required">*</span></label>
+                    <input type="text" id="memberContact" class="form-control" placeholder="Phone number" required>
+                </div>
+                <div class="form-group">
+                    <label>Email</label>
+                    <input type="email" id="memberEmail" class="form-control" placeholder="Email address">
+                </div>
+                <div class="form-group">
+                    <label>Membership Date</label>
+                    <input type="date" id="memberDate" class="form-control">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success" id="memberSubmitBtn"><i class="fas fa-plus"></i> Add Member</button>
+                    <button type="button" class="btn btn-outline" onclick="clearMemberForm()"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3><i class="fas fa-list" style="margin-right:8px;color:var(--accent)"></i>Member List</h3>
+            <div class="search-box">
+                <input type="text" id="memberSearch" placeholder="Search members...">
+                <button onclick="renderMemberTable()"><i class="fas fa-search"></i></button>
+            </div>
+        </div>
+        <div class="card-body table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Email</th><th>Membership</th><th>Actions</th></tr></thead>
+                <tbody id="memberTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     PAGE: ISSUE BOOK
+     ========================================================= -->
+<div class="page" id="page-issue">
+    <div class="page-header">
+        <div><h2>Issue Book</h2><p>Issue a book to a library member</p></div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Issue Book</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-hand-holding" style="margin-right:8px;color:var(--success)"></i>Issue New Book</h3></div>
+        <div class="card-body">
+            <div class="avail-box" id="issueAvailBox" style="display:none">
+                <i class="fas fa-info-circle"></i>
+                <div class="avail-text">
+                    Book: <strong id="issueBookName">—</strong> &nbsp;|&nbsp; Available: <strong id="issueBookAvail">—</strong> copies
+                </div>
+            </div>
+            <form id="issueForm" class="form-grid">
+                <div class="form-group">
+                    <label>Select Member <span class="required">*</span></label>
+                    <select id="issueMember" class="form-control" required><option value="">-- Choose Member --</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Select Book <span class="required">*</span></label>
+                    <select id="issueBook" class="form-control" required><option value="">-- Choose Book --</option></select>
+                </div>
+                <div class="form-group">
+                    <label>Issue Date <span class="required">*</span></label>
+                    <input type="date" id="issueDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Expected Return Date</label>
+                    <input type="date" id="issueReturnDate" class="form-control">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success"><i class="fas fa-check"></i> Issue Book</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-list" style="margin-right:8px;color:var(--accent)"></i>Currently Issued Books</h3></div>
+        <div class="card-body table-wrap">
+            <table>
+                <thead><tr><th>Issue ID</th><th>Book</th><th>Member</th><th>Issue Date</th><th>Return Date</th><th>Status</th></tr></thead>
+                <tbody id="issuedTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     PAGE: RETURN BOOK
+     ========================================================= -->
+<div class="page" id="page-return">
+    <div class="page-header">
+        <div><h2>Return Book</h2><p>Process book returns</p></div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Return Book</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-undo-alt" style="margin-right:8px;color:var(--accent)"></i>Issued Books — Select to Return</h3></div>
+        <div class="card-body table-wrap">
+            <table>
+                <thead><tr><th>Issue ID</th><th>Book</th><th>Member</th><th>Issue Date</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody id="returnTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     PAGE: SEARCH
+     ========================================================= -->
+<div class="page" id="page-search">
+    <div class="page-header">
+        <div><h2>Search Books</h2><p>Find books by ID, title, author, or category</p></div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Search</span></div>
+    </div>
+
+    <div class="search-big">
+        <input type="text" id="globalSearch" placeholder="🔍  Search by Book ID, Title, Author or Category...">
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h3><i class="fas fa-search" style="margin-right:8px;color:var(--accent)"></i>Search Results</h3>
+            <span id="searchCount" style="font-size:13px;color:var(--text-light)"></span>
+        </div>
+        <div class="card-body table-wrap">
+            <table>
+                <thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Category</th><th>Available</th><th>Status</th></tr></thead>
+                <tbody id="searchResultsBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     PAGE: REPORTS
+     ========================================================= -->
+<div class="page" id="page-reports">
+    <div class="page-header">
+        <div><h2>Reports</h2><p>Library statistics and analytics</p></div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Reports</span></div>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card blue"><div class="stat-icon"><i class="fas fa-book"></i></div>
+            <div class="stat-info"><h3 id="rptTotalBooks">0</h3><p>Total Books</p></div></div>
+        <div class="stat-card purple"><div class="stat-icon"><i class="fas fa-users"></i></div>
+            <div class="stat-info"><h3 id="rptTotalMembers">0</h3><p>Total Members</p></div></div>
+        <div class="stat-card orange"><div class="stat-icon"><i class="fas fa-exchange-alt"></i></div>
+            <div class="stat-info"><h3 id="rptIssued">0</h3><p>Currently Issued</p></div></div>
+        <div class="stat-card green"><div class="stat-icon"><i class="fas fa-check-double"></i></div>
+            <div class="stat-info"><h3 id="rptReturned">0</h3><p>Returned Books</p></div></div>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-header"><h3><i class="fas fa-chart-pie" style="margin-right:8px;color:var(--accent)"></i>Book Distribution</h3></div>
+            <div class="card-body" style="text-align:center">
+                <div class="donut-chart" id="donutChart">
+                    <div class="donut-center">
+                        <span class="donut-num" id="donutTotal">0</span>
+                        <span class="donut-label">Total</span>
+                    </div>
+                </div>
+                <div class="legend" id="donutLegend"></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h3><i class="fas fa-chart-bar" style="margin-right:8px;color:var(--success)"></i>Category Breakdown</h3></div>
+            <div class="card-body" id="categoryBars">
+                <!-- dynamically filled -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =========================================================
+     PAGE: SETTINGS
+     ========================================================= -->
+<div class="page" id="page-settings">
+    <div class="page-header">
+        <div><h2>Settings</h2><p>Manage application preferences</p></div>
+        <div class="breadcrumb"><i class="fas fa-home"></i> Home / <span>Settings</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="settings-section">
+                <h4><i class="fas fa-user-circle" style="margin-right:8px;color:var(--accent)"></i>Admin Profile</h4>
+                <div class="form-grid" style="max-width:600px">
+                    <div class="form-group">
+                        <label>Admin Name</label>
+                        <input type="text" class="form-control" value="Admin User">
+                    </div>
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" class="form-control" value="admin@library.edu">
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4><i class="fas fa-lock" style="margin-right:8px;color:var(--warning)"></i>Change Password</h4>
+                <div class="form-grid" style="max-width:600px">
+                    <div class="form-group">
+                        <label>Current Password</label>
+                        <input type="password" class="form-control" placeholder="Enter current password">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password</label>
+                        <input type="password" class="form-control" placeholder="Enter new password">
+                    </div>
+                    <div class="form-actions">
+                        <button class="btn btn-primary" onclick="showToast('Password updated successfully!','success')"><i class="fas fa-save"></i> Update Password</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4><i class="fas fa-bell" style="margin-right:8px;color:var(--danger)"></i>Notifications</h4>
+                <div class="settings-row">
+                    <div class="settings-row-info"><p>Email Notifications</p><span>Receive email alerts for overdue books</span></div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info"><p>Issue Alerts</p><span>Show notification when a book is issued</span></div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+                <div class="settings-row">
+                    <div class="settings-row-info"><p>Return Reminders</p><span>Remind members about pending returns</span></div>
+                    <label class="toggle"><input type="checkbox"><span class="toggle-slider"></span></label>
+                </div>
+            </div>
+
+            <div class="settings-section">
+                <h4><i class="fas fa-palette" style="margin-right:8px;color:#805ad5"></i>Theme</h4>
+                <div class="settings-row">
+                    <div class="settings-row-info"><p>Dark Sidebar</p><span>Use dark theme for the sidebar</span></div>
+                    <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        </div><!-- /content -->
+    </div><!-- /main-area -->
+</div><!-- /app -->
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Confirm Modal -->
+<div class="modal-overlay hidden" id="confirmModal">
+    <div class="modal">
+        <h3 id="confirmTitle">Confirm</h3>
+        <p id="confirmMsg">Are you sure?</p>
+        <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeConfirm()">Cancel</button>
+            <button class="btn btn-danger" id="confirmYes">Yes, Proceed</button>
+        </div>
+    </div>
+</div>
+
+<!-- View Modal -->
+<div class="modal-overlay hidden" id="viewModal">
+    <div class="modal" style="max-width:500px;text-align:left">
+        <h3 id="viewTitle" style="margin-bottom:16px"></h3>
+        <div id="viewContent" class="view-modal-content"></div>
+        <div class="modal-actions" style="margin-top:18px">
+            <button class="btn btn-primary" onclick="document.getElementById('viewModal').classList.add('hidden')">Close</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     JAVASCRIPT
+     ============================================================ -->
+<script>
+/* ===========================================================
+   DATA LAYER — localStorage
+   Uses keys: lms_books, lms_members, lms_issues, lms_activity
+   All data is DEMO / FRONTEND-ONLY for demonstration.
+   In the real project, these operations become JDBC calls to MySQL.
+   =========================================================== */
+
+// ---- Helpers ----
+const $ = id => document.getElementById(id);
+const today = () => new Date().toISOString().split('T')[0];
+const LS = {
+    get(k) { try { return JSON.parse(localStorage.getItem(k)) || null; } catch { return null; } },
+    set(k,v) { localStorage.setItem(k, JSON.stringify(v)); }
+};
+
+// ---- Seed data ----
+function seedData() {
+    if (!LS.get('lms_books')) {
+        LS.set('lms_books', [
+            {book_id:1, title:'Data Structures and Algorithms', author:'Thomas H. Cormen', category:'Technology', quantity:10, available:8},
+            {book_id:2, title:'Java Programming', author:'Herbert Schildt', category:'Programming', quantity:12, available:10},
+            {book_id:3, title:'Database Management Systems', author:'Raghu Ramakrishnan', category:'Technology', quantity:8, available:6},
+            {book_id:4, title:'Operating System Concepts', author:'Abraham Silberschatz', category:'Engineering', quantity:6, available:5},
+            {book_id:5, title:'Computer Networks', author:'Andrew S. Tanenbaum', category:'Technology', quantity:7, available:7},
+            {book_id:6, title:'The Great Gatsby', author:'F. Scott Fitzgerald', category:'Fiction', quantity:5, available:4},
+            {book_id:7, title:'Discrete Mathematics', author:'Kenneth H. Rosen', category:'Mathematics', quantity:9, available:9},
+            {book_id:8, title:'Introduction to Algorithms', author:'CLRS', category:'Technology', quantity:6, available:3},
+            {book_id:9, title:'Pride and Prejudice', author:'Jane Austen', category:'Literature', quantity:4, available:4},
+            {book_id:10,title:'Engineering Physics', author:'Gaur & Gupta', category:'Science', quantity:5, available:5}
+        ]);
+    }
+    if (!LS.get('lms_members')) {
+        LS.set('lms_members', [
+            {member_id:1, name:'Aditya Sharma', contact:'9876543210', email:'aditya@college.edu', membership_date:'2026-07-15'},
+            {member_id:2, name:'Priya Verma', contact:'9123456780', email:'priya@college.edu', membership_date:'2026-08-01'},
+            {member_id:3, name:'Rahul Gupta', contact:'9988776655', email:'rahul@college.edu', membership_date:'2026-08-10'},
+            {member_id:4, name:'Sneha Patil', contact:'9001122334', email:'sneha@college.edu', membership_date:'2026-09-01'},
+            {member_id:5, name:'Vikram Singh', contact:'9555444333', email:'vikram@college.edu', membership_date:'2026-09-12'}
+        ]);
+    }
+    if (!LS.get('lms_issues')) {
+        LS.set('lms_issues', [
+            {issue_id:1, book_id:1, member_id:1, issue_date:'2026-09-18', return_date:'', status:'Issued'},
+            {issue_id:2, book_id:2, member_id:2, issue_date:'2026-09-19', return_date:'', status:'Issued'},
+            {issue_id:3, book_id:3, member_id:3, issue_date:'2026-09-15', return_date:'2026-09-22', status:'Completed'},
+            {issue_id:4, book_id:1, member_id:4, issue_date:'2026-09-20', return_date:'', status:'Issued'},
+            {issue_id:5, book_id:8, member_id:5, issue_date:'2026-09-14', return_date:'', status:'Issued'},
+            {issue_id:6, book_id:3, member_id:1, issue_date:'2026-09-10', return_date:'2026-09-18', status:'Completed'},
+            {issue_id:7, book_id:6, member_id:2, issue_date:'2026-09-21', return_date:'', status:'Issued'},
+            {issue_id:8, book_id:8, member_id:3, issue_date:'2026-09-12', return_date:'2026-09-20', status:'Completed'}
+        ]);
+    }
+    if (!LS.get('lms_activity')) {
+        LS.set('lms_activity', [
+            {type:'issue', text:'<b>Sneha Patil</b> was issued <b>Data Structures and Algorithms</b>', time:'2 hours ago'},
+            {type:'return', text:'<b>Rahul Gupta</b> returned <b>Database Management Systems</b>', time:'5 hours ago'},
+            {type:'add', text:'New book <b>Engineering Physics</b> added to library', time:'1 day ago'},
+            {type:'member', text:'New member <b>Vikram Singh</b> registered', time:'2 days ago'},
+            {type:'issue', text:'<b>Priya Verma</b> was issued <b>Java Programming</b>', time:'3 days ago'},
+            {type:'return', text:'<b>Aditya Sharma</b> returned <b>Database Management Systems</b>', time:'4 days ago'}
+        ]);
+    }
+}
+seedData();
+
+// ---- Data accessors ----
+function getBooks()   { return LS.get('lms_books')   || []; }
+function getMembers() { return LS.get('lms_members') || []; }
+function getIssues()  { return LS.get('lms_issues')  || []; }
+function getActivity(){ return LS.get('lms_activity') || []; }
+function nextId(arr, key) { return arr.length ? Math.max(...arr.map(x=>x[key])) + 1 : 1; }
+function bookName(id) { const b = getBooks().find(x=>x.book_id===id); return b ? b.title : '—'; }
+function memberName(id) { const m = getMembers().find(x=>x.member_id===id); return m ? m.name : '—'; }
+
+function addActivity(type, text) {
+    const acts = getActivity();
+    acts.unshift({type, text, time:'Just now'});
+    if (acts.length > 20) acts.length = 20;
+    LS.set('lms_activity', acts);
+}
+
+// ===========================================================
+// TOAST NOTIFICATIONS
+// ===========================================================
+function showToast(msg, type='info') {
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    const icon = type==='success' ? 'check-circle' : type==='error' ? 'exclamation-circle' : 'info-circle';
+    t.innerHTML = `<i class="fas fa-${icon}"></i> ${msg}`;
+    $('toastContainer').appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+}
+
+// ===========================================================
+// CONFIRM DIALOG
+// ===========================================================
+let confirmCallback = null;
+function showConfirm(title, msg, cb) {
+    $('confirmTitle').textContent = title;
+    $('confirmMsg').textContent = msg;
+    $('confirmModal').classList.remove('hidden');
+    confirmCallback = cb;
+}
+function closeConfirm() { $('confirmModal').classList.add('hidden'); confirmCallback = null; }
+$('confirmYes').addEventListener('click', () => { if (confirmCallback) confirmCallback(); closeConfirm(); });
+
+// ===========================================================
+// NAVIGATION
+// ===========================================================
+document.querySelectorAll('.nav-item[data-page]').forEach(item => {
+    item.addEventListener('click', () => {
+        const page = item.dataset.page;
+        // nav
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+        item.classList.add('active');
+        // pages
+        document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+        $('page-'+page).classList.add('active');
+        // mobile close
+        $('sidebar').classList.remove('open');
+        $('sidebarOverlay').classList.remove('show');
+        // refresh data
+        refreshCurrentPage(page);
+    });
+});
+
+// Mobile menu
+$('menuToggle').addEventListener('click', () => {
+    $('sidebar').classList.toggle('open');
+    $('sidebarOverlay').classList.toggle('show');
+});
+$('sidebarOverlay').addEventListener('click', () => {
+    $('sidebar').classList.remove('open');
+    $('sidebarOverlay').classList.remove('show');
+});
+
+// Logout
+function handleLogout() {
+    showConfirm('Logout', 'Are you sure you want to logout?', () => {
+        showToast('Logged out successfully!', 'success');
+        setTimeout(() => location.reload(), 1000);
+    });
+}
+$('logoutBtn').addEventListener('click', handleLogout);
+$('logoutBtn2').addEventListener('click', handleLogout);
+
+function refreshCurrentPage(page) {
+    switch(page) {
+        case 'dashboard': refreshDashboard(); break;
+        case 'books': renderBookTable(); break;
+        case 'members': renderMemberTable(); break;
+        case 'issue': refreshIssuePage(); break;
+        case 'return': refreshReturnPage(); break;
+        case 'search': doSearch(); break;
+        case 'reports': refreshReports(); break;
+    }
+}
+
+// ===========================================================
+// DASHBOARD
+// ===========================================================
+function refreshDashboard() {
+    const books = getBooks(), members = getMembers(), issues = getIssues();
+    const totalQty = books.reduce((s,b)=>s+b.quantity,0);
+    const availQty = books.reduce((s,b)=>s+b.available,0);
+    const issuedCount = issues.filter(i=>i.status==='Issued').length;
+    $('statTotalBooks').textContent = totalQty;
+    $('statAvailBooks').textContent = availQty;
+    $('statIssuedBooks').textContent = issuedCount;
+    $('statTotalMembers').textContent = members.length;
+
+    // Recent issues
+    const recent = [...issues].reverse().slice(0,6);
+    $('dashRecentIssues').innerHTML = recent.length ? recent.map(i => `
+        <tr>
+            <td>#${i.issue_id}</td>
+            <td>${bookName(i.book_id)}</td>
+            <td>${memberName(i.member_id)}</td>
+            <td>${i.issue_date}</td>
+            <td>${i.return_date || '—'}</td>
+            <td><span class="badge badge-${i.status.toLowerCase()}">${i.status}</span></td>
+        </tr>
+    `).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-light)">No records yet</td></tr>';
+
+    // Activity
+    const acts = getActivity().slice(0,8);
+    $('activityFeed').innerHTML = acts.map(a => `
+        <li class="activity-item">
+            <div class="activity-icon ${a.type}"><i class="fas fa-${a.type==='add'?'plus':a.type==='issue'?'arrow-right':a.type==='return'?'arrow-left':'user-plus'}"></i></div>
+            <div class="activity-text">${a.text}<span class="time">${a.time}</span></div>
+        </li>
+    `).join('');
+}
+
+// ===========================================================
+// BOOK MANAGEMENT
+// ===========================================================
+function clearBookForm() {
+    $('bookEditId').value = '';
+    $('bookTitle').value = '';
+    $('bookAuthor').value = '';
+    $('bookCategory').value = '';
+    $('bookQuantity').value = '';
+    $('bookSubmitBtn').innerHTML = '<i class="fas fa-plus"></i> Add Book';
+}
+
+$('bookForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const title = $('bookTitle').value.trim();
+    const author = $('bookAuthor').value.trim();
+    const category = $('bookCategory').value;
+    const qty = parseInt($('bookQuantity').value);
+
+    if (!title || !author || !category || isNaN(qty) || qty < 1) {
+        showToast('Please fill all fields correctly.', 'error'); return;
+    }
+
+    const books = getBooks();
+    const editId = $('bookEditId').value;
+
+    if (editId) {
+        // UPDATE
+        const idx = books.findIndex(b => b.book_id === parseInt(editId));
+        if (idx === -1) { showToast('Book not found.', 'error'); return; }
+        const issued = books[idx].quantity - books[idx].available;
+        if (qty < issued) {
+            showToast(`Quantity cannot be less than currently issued (${issued}).`, 'error'); return;
+        }
+        books[idx].title = title;
+        books[idx].author = author;
+        books[idx].category = category;
+        books[idx].available = qty - issued;
+        books[idx].quantity = qty;
+        LS.set('lms_books', books);
+        showToast('Book updated successfully!', 'success');
+        addActivity('add', `Book <b>${title}</b> was updated`);
+    } else {
+        // ADD
+        const newBook = { book_id: nextId(books,'book_id'), title, author, category, quantity: qty, available: qty };
+        books.push(newBook);
+        LS.set('lms_books', books);
+        showToast('Book added successfully!', 'success');
+        addActivity('add', `New book <b>${title}</b> added to library`);
+    }
+    clearBookForm();
+    renderBookTable();
+});
+
+function renderBookTable() {
+    const search = ($('bookSearch')?.value || '').toLowerCase();
+    let books = getBooks();
+    if (search) books = books.filter(b =>
+        b.book_id.toString().includes(search) ||
+        b.title.toLowerCase().includes(search) ||
+        b.author.toLowerCase().includes(search) ||
+        b.category.toLowerCase().includes(search)
+    );
+    $('bookTableBody').innerHTML = books.length ? books.map(b => `
+        <tr>
+            <td>${b.book_id}</td>
+            <td>${b.title}</td>
+            <td>${b.author}</td>
+            <td>${b.category}</td>
+            <td>${b.quantity}</td>
+            <td><span class="badge ${b.available>0?'badge-available':'badge-unavailable'}">${b.available}</span></td>
+            <td>
+                <div class="action-btns">
+                    <button class="action-btn view" title="View" onclick="viewBook(${b.book_id})"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn edit" title="Edit" onclick="editBook(${b.book_id})"><i class="fas fa-pen"></i></button>
+                    <button class="action-btn delete" title="Delete" onclick="deleteBook(${b.book_id})"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        </tr>
+    `).join('') : '<tr><td colspan="7"><div class="empty-state"><i class="fas fa-book"></i><p>No books found</p></div></td></tr>';
+}
+$('bookSearch').addEventListener('input', renderBookTable);
+
+function viewBook(id) {
+    const b = getBooks().find(x=>x.book_id===id); if (!b) return;
+    $('viewTitle').textContent = 'Book Details';
+    $('viewContent').innerHTML = `
+        <div class="view-row"><span class="view-label">Book ID</span><span class="view-value">${b.book_id}</span></div>
+        <div class="view-row"><span class="view-label">Title</span><span class="view-value">${b.title}</span></div>
+        <div class="view-row"><span class="view-label">Author</span><span class="view-value">${b.author}</span></div>
+        <div class="view-row"><span class="view-label">Category</span><span class="view-value">${b.category}</span></div>
+        <div class="view-row"><span class="view-label">Quantity</span><span class="view-value">${b.quantity}</span></div>
+        <div class="view-row"><span class="view-label">Available</span><span class="view-value">${b.available}</span></div>
+    `;
+    $('viewModal').classList.remove('hidden');
+}
+function editBook(id) {
+    const b = getBooks().find(x=>x.book_id===id); if (!b) return;
+    $('bookEditId').value = b.book_id;
+    $('bookTitle').value = b.title;
+    $('bookAuthor').value = b.author;
+    $('bookCategory').value = b.category;
+    $('bookQuantity').value = b.quantity;
+    $('bookSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Update Book';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+function deleteBook(id) {
+    const issues = getIssues();
+    if (issues.some(i => i.book_id === id && i.status === 'Issued')) {
+        showToast('Cannot delete: book has active issues.', 'error'); return;
+    }
+    showConfirm('Delete Book', 'Are you sure you want to delete this book?', () => {
+        const books = getBooks().filter(b=>b.book_id!==id);
+        LS.set('lms_books', books);
+        showToast('Book deleted successfully!', 'success');
+        renderBookTable();
+    });
+}
+
+// ===========================================================
+// MEMBER MANAGEMENT
+// ===========================================================
+function clearMemberForm() {
+    $('memberEditId').value = '';
+    $('memberName').value = '';
+    $('memberContact').value = '';
+    $('memberEmail').value = '';
+    $('memberDate').value = '';
+    $('memberSubmitBtn').innerHTML = '<i class="fas fa-plus"></i> Add Member';
+}
+
+$('memberForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const name = $('memberName').value.trim();
+    const contact = $('memberContact').value.trim();
+    const email = $('memberEmail').value.trim();
+    const mdate = $('memberDate').value || today();
+
+    if (!name || !contact) { showToast('Name and Contact are required.', 'error'); return; }
+    if (email && !email.includes('@')) { showToast('Please enter a valid email.', 'error'); return; }
+
+    const members = getMembers();
+    const editId = $('memberEditId').value;
+
+    if (editId) {
+        const idx = members.findIndex(m => m.member_id === parseInt(editId));
+        if (idx === -1) { showToast('Member not found.', 'error'); return; }
+        members[idx].name = name;
+        members[idx].contact = contact;
+        members[idx].email = email;
+        members[idx].membership_date = mdate;
+        LS.set('lms_members', members);
+        showToast('Member updated successfully!', 'success');
+    } else {
+        members.push({ member_id: nextId(members,'member_id'), name, contact, email, membership_date: mdate });
+        LS.set('lms_members', members);
+        showToast('Member added successfully!', 'success');
+        addActivity('member', `New member <b>${name}</b> registered`);
+    }
+    clearMemberForm();
+    renderMemberTable();
+});
+
+function renderMemberTable() {
+    const search = ($('memberSearch')?.value || '').toLowerCase();
+    let members = getMembers();
+    if (search) members = members.filter(m =>
+        m.member_id.toString().includes(search) ||
+        m.name.toLowerCase().includes(search) ||
+        m.contact.includes(search) ||
+        m.email.toLowerCase().includes(search)
+    );
+    $('memberTableBody').innerHTML = members.length ? members.map(m => `
+        <tr>
+            <td>${m.member_id}</td>
+            <td>${m.name}</td>
+            <td>${m.contact}</td>
+            <td>${m.email}</td>
+            <td>${m.membership_date}</td>
+            <td>
+                <div class="action-btns">
+                    <button class="action-btn view" title="View" onclick="viewMember(${m.member_id})"><i class="fas fa-eye"></i></button>
+                    <button class="action-btn edit" title="Edit" onclick="editMember(${m.member_id})"><i class="fas fa-pen"></i></button>
+                    <button class="action-btn delete" title="Delete" onclick="deleteMember(${m.member_id})"><i class="fas fa-trash"></i></button>
+                </div>
+            </td>
+        </tr>
+    `).join('') : '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-users"></i><p>No members found</p></div></td></tr>';
+}
+$('memberSearch').addEventListener('input', renderMemberTable);
+
+function viewMember(id) {
+    const m = getMembers().find(x=>x.member_id===id); if (!m) return;
+    $('viewTitle').textContent = 'Member Details';
+    $('viewContent').innerHTML = `
+        <div class="view-row"><span class="view-label">Member ID</span><span class="view-value">${m.member_id}</span></div>
+        <div class="view-row"><span class="view-label">Name</span><span class="view-value">${m.name}</span></div>
+        <div class="view-row"><span class="view-label">Contact</span><span class="view-value">${m.contact}</span></div>
+        <div class="view-row"><span class="view-label">Email</span><span class="view-value">${m.email}</span></div>
+        <div class="view-row"><span class="view-label">Membership</span><span class="view-value">${m.membership_date}</span></div>
+    `;
+    $('viewModal').classList.remove('hidden');
+}
+function editMember(id) {
+    const m = getMembers().find(x=>x.member_id===id); if (!m) return;
+    $('memberEditId').value = m.member_id;
+    $('memberName').value = m.name;
+    $('memberContact').value = m.contact;
+    $('memberEmail').value = m.email;
+    $('memberDate').value = m.membership_date;
+    $('memberSubmitBtn').innerHTML = '<i class="fas fa-save"></i> Update Member';
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+function deleteMember(id) {
+    const issues = getIssues();
+    if (issues.some(i => i.member_id === id && i.status === 'Issued')) {
+        showToast('Cannot delete: member has active issues.', 'error'); return;
+    }
+    showConfirm('Delete Member', 'Are you sure you want to delete this member?', () => {
+        const members = getMembers().filter(m=>m.member_id!==id);
+        LS.set('lms_members', members);
+        showToast('Member deleted successfully!', 'success');
+        renderMemberTable();
+    });
+}
+
+// ===========================================================
+// ISSUE BOOK
+// ===========================================================
+function refreshIssuePage() {
+    // Populate dropdowns
+    const members = getMembers(), books = getBooks();
+    $('issueMember').innerHTML = '<option value="">-- Choose Member --</option>' +
+        members.map(m => `<option value="${m.member_id}">${m.member_id} - ${m.name}</option>`).join('');
+    $('issueBook').innerHTML = '<option value="">-- Choose Book --</option>' +
+        books.map(b => `<option value="${b.book_id}" ${b.available<=0?'disabled':''}>${b.book_id} - ${b.title} (Avail: ${b.available})</option>`).join('');
+    $('issueDate').value = today();
+    $('issueReturnDate').value = '';
+    $('issueAvailBox').style.display = 'none';
+
+    // Issued table
+    renderIssuedTable();
+}
+
+$('issueBook').addEventListener('change', () => {
+    const bid = parseInt($('issueBook').value);
+    if (!bid) { $('issueAvailBox').style.display = 'none'; return; }
+    const b = getBooks().find(x=>x.book_id===bid);
+    if (b) {
+        $('issueBookName').textContent = b.title;
+        $('issueBookAvail').textContent = b.available;
+        $('issueAvailBox').style.display = 'flex';
+    }
+});
+
+function renderIssuedTable() {
+    const issued = getIssues().filter(i=>i.status==='Issued');
+    $('issuedTableBody').innerHTML = issued.length ? issued.map(i => `
+        <tr>
+            <td>#${i.issue_id}</td>
+            <td>${bookName(i.book_id)}</td>
+            <td>${memberName(i.member_id)}</td>
+            <td>${i.issue_date}</td>
+            <td>${i.return_date || '—'}</td>
+            <td><span class="badge badge-issued">Issued</span></td>
+        </tr>
+    `).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--text-light)">No books currently issued</td></tr>';
+}
+
+$('issueForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const mid = parseInt($('issueMember').value);
+    const bid = parseInt($('issueBook').value);
+    const idate = $('issueDate').value;
+    const rdate = $('issueReturnDate').value;
+
+    if (!mid || !bid || !idate) { showToast('Please fill all required fields.', 'error'); return; }
+
+    const books = getBooks();
+    const bIdx = books.findIndex(b=>b.book_id===bid);
+    if (bIdx === -1) { showToast('Book not found.', 'error'); return; }
+    if (books[bIdx].available <= 0) { showToast('Book is not available!', 'error'); return; }
+
+    // Issue
+    const issues = getIssues();
+    const newIssue = {
+        issue_id: nextId(issues,'issue_id'),
+        book_id: bid,
+        member_id: mid,
+        issue_date: idate,
+        return_date: rdate,
+        status: 'Issued'
+    };
+    issues.push(newIssue);
+    books[bIdx].available -= 1;
+    LS.set('lms_issues', issues);
+    LS.set('lms_books', books);
+
+    const bName = books[bIdx].title;
+    const mName = memberName(mid);
+    addActivity('issue', `<b>${mName}</b> was issued <b>${bName}</b>`);
+    showToast(`"${bName}" issued to ${mName} successfully!`, 'success');
+    refreshIssuePage();
+});
+
+// ===========================================================
+// RETURN BOOK
+// ===========================================================
+function refreshReturnPage() {
+    const issued = getIssues().filter(i=>i.status==='Issued');
+    $('returnTableBody').innerHTML = issued.length ? issued.map(i => `
+        <tr>
+            <td>#${i.issue_id}</td>
+            <td>${bookName(i.book_id)}</td>
+            <td>${memberName(i.member_id)}</td>
+            <td>${i.issue_date}</td>
+            <td><span class="badge badge-issued">Issued</span></td>
+            <td><button class="btn btn-primary btn-sm" onclick="returnBook(${i.issue_id})"><i class="fas fa-undo-alt"></i> Return</button></td>
+        </tr>
+    `).join('') : '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-check-double"></i><p>No books pending return</p></div></td></tr>';
+}
+
+function returnBook(issueId) {
+    showConfirm('Return Book', 'Confirm return of this book?', () => {
+        const issues = getIssues();
+        const idx = issues.findIndex(i => i.issue_id === issueId);
+        if (idx === -1) { showToast('Issue record not found.', 'error'); return; }
+
+        issues[idx].return_date = today();
+        issues[idx].status = 'Completed';
+
+        const books = getBooks();
+        const bIdx = books.findIndex(b => b.book_id === issues[idx].book_id);
+        if (bIdx !== -1) books[bIdx].available += 1;
+
+        LS.set('lms_issues', issues);
+        LS.set('lms_books', books);
+
+        const bName = bookName(issues[idx].book_id);
+        const mName = memberName(issues[idx].member_id);
+        addActivity('return', `<b>${mName}</b> returned <b>${bName}</b>`);
+        showToast(`"${bName}" returned successfully!`, 'success');
+        refreshReturnPage();
+    });
+}
+
+// ===========================================================
+// SEARCH
+// ===========================================================
+$('globalSearch').addEventListener('input', doSearch);
+function doSearch() {
+    const q = ($('globalSearch')?.value || '').toLowerCase();
+    let books = getBooks();
+    if (q) books = books.filter(b =>
+        b.book_id.toString().includes(q) ||
+        b.title.toLowerCase().includes(q) ||
+        b.author.toLowerCase().includes(q) ||
+        b.category.toLowerCase().includes(q)
+    );
+    $('searchCount').textContent = books.length + ' book(s) found';
+    $('searchResultsBody').innerHTML = books.length ? books.map(b => `
+        <tr>
+            <td>${b.book_id}</td>
+            <td>${b.title}</td>
+            <td>${b.author}</td>
+            <td>${b.category}</td>
+            <td>${b.available}</td>
+            <td><span class="badge ${b.available>0?'badge-available':'badge-unavailable'}">${b.available>0?'Available':'Unavailable'}</span></td>
+        </tr>
+    `).join('') : '<tr><td colspan="6"><div class="empty-state"><i class="fas fa-search"></i><p>No books match your search</p></div></td></tr>';
+}
+
+// ===========================================================
+// REPORTS
+// ===========================================================
+function refreshReports() {
+    const books = getBooks(), members = getMembers(), issues = getIssues();
+    const totalQty = books.reduce((s,b)=>s+b.quantity,0);
+    const availQty = books.reduce((s,b)=>s+b.available,0);
+    const issuedCount = issues.filter(i=>i.status==='Issued').length;
+    const returnedCount = issues.filter(i=>i.status==='Completed').length;
+
+    $('rptTotalBooks').textContent = totalQty;
+    $('rptTotalMembers').textContent = members.length;
+    $('rptIssued').textContent = issuedCount;
+    $('rptReturned').textContent = returnedCount;
+
+    // Donut chart
+    const avPct = totalQty ? Math.round((availQty/totalQty)*100) : 0;
+    const isPct = totalQty ? Math.round((issuedCount/totalQty)*100) : 0;
+    const otPct = 100 - avPct - isPct;
+    $('donutChart').style.background = `conic-gradient(
+        var(--success) 0% ${avPct}%,
+        var(--warning) ${avPct}% ${avPct+isPct}%,
+        var(--border) ${avPct+isPct}% 100%
+    )`;
+    $('donutTotal').textContent = totalQty;
+    $('donutLegend').innerHTML = `
+        <div class="legend-item"><div class="legend-dot" style="background:var(--success)"></div>Available (${availQty})</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--warning)"></div>Issued (${issuedCount})</div>
+    `;
+
+    // Category bars
+    const cats = {};
+    books.forEach(b => { cats[b.category] = (cats[b.category]||0) + b.quantity; });
+    const maxCat = Math.max(...Object.values(cats), 1);
+    const colors = ['blue','green','orange','purple','blue','green','orange','purple'];
+    let ci = 0;
+    $('categoryBars').innerHTML = Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([cat,cnt]) => `
+        <div class="report-bar-wrap">
+            <div class="report-bar-label"><span>${cat}</span><span>${cnt} books</span></div>
+            <div class="report-bar"><div class="report-bar-fill ${colors[ci++%colors.length]}" style="width:${(cnt/maxCat*100).toFixed(0)}%"></div></div>
+        </div>
+    `).join('');
+}
+
+// ===========================================================
+// INITIAL LOAD
+// ===========================================================
+refreshDashboard();
+renderBookTable();
+renderMemberTable();
+doSearch();
+
+</script>
+</body>
+</html>
